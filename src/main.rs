@@ -1,22 +1,25 @@
-use std::{fs::File, io::Write, ops::Index};
+mod sphere;
+mod vec;
 
-#[derive(Clone, Default)]
-struct Vec3<T> {
-    r: T,
-    g: T,
-    b: T,
-}
+use std::fs::File;
+use std::io::Write;
 
-impl<T> Index<usize> for Vec3<T> {
-    type Output = T;
+use sphere::Sphere;
+use vec::Vec3;
 
-    fn index(&self, idx: usize) -> &Self::Output {
-        match idx {
-            0 => &self.r,
-            1 => &self.g,
-            2 => &self.b,
-            _ => panic!("Index out of bounds"),
-        }
+fn cast_ray(orig: &Vec3<f32>, dir: &Vec3<f32>, sphere: &Sphere) -> Vec3<f32> {
+    let sphere_dist = f32::MAX;
+    if !sphere.ray_intersect(orig, dir, sphere_dist) {
+        return Vec3 {
+            r: 0.2,
+            g: 0.7,
+            b: 0.8,
+        };
+    }
+    Vec3 {
+        r: 0.4,
+        g: 0.4,
+        b: 0.3,
     }
 }
 
