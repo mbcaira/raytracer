@@ -1,18 +1,22 @@
 use std::ops::{Add, Div, Index, Mul, Sub};
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct Vec3<T> {
     pub r: T,
     pub g: T,
     pub b: T,
 }
 
-impl<T> Vec3<T>
-where
-    T: Add<Output = T> + Copy,
-{
-    pub fn sum(&self) -> T {
-        self.r + self.g + self.b
+impl Vec3<f32> {
+    pub fn normalize(&mut self) {
+        let length = (self.r * self.r + self.g * self.g + self.b * self.b).sqrt();
+        self.r /= length;
+        self.g /= length;
+        self.b /= length;
+    }
+
+    pub fn dot(&self, other: &Vec3<f32>) -> f32 {
+        self.r * other.r + self.g * other.g + self.b * other.b
     }
 }
 

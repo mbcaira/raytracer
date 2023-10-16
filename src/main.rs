@@ -1,29 +1,37 @@
 mod sphere;
 mod vec;
 
+use std::f32::consts::PI;
 use std::fs::File;
 use std::io::Write;
 
 use sphere::Sphere;
 use vec::Vec3;
 
+const FOV: f32 = PI / 2.0;
+const ORIGIN: Vec3<f32> = Vec3 {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+};
+
 fn cast_ray(orig: &Vec3<f32>, dir: &Vec3<f32>, sphere: &Sphere) -> Vec3<f32> {
-    let sphere_dist = f32::MAX;
-    if !sphere.ray_intersect(orig, dir, sphere_dist) {
-        return Vec3 {
+    if sphere.ray_intersect(orig, dir) {
+        Vec3 {
+            r: 0.4,
+            g: 0.4,
+            b: 0.3,
+        }
+    } else {
+        Vec3 {
             r: 0.2,
             g: 0.7,
             b: 0.8,
-        };
-    }
-    Vec3 {
-        r: 0.4,
-        g: 0.4,
-        b: 0.3,
+        }
     }
 }
 
-fn render() {
+fn render(sphere: &Sphere) {
     const WIDTH: usize = 1024;
     const HEIGHT: usize = 768;
 
@@ -38,11 +46,18 @@ fn render() {
 
     for j in 0..HEIGHT {
         for i in 0..WIDTH {
-            framebuffer[i + j * WIDTH] = Vec3 {
-                r: j as f32 / HEIGHT as f32,
-                g: i as f32 / WIDTH as f32,
-                b: 0.0,
-            }
+            let x =
+                (2.0 * (i as f32 + 0.5) / WIDTH as f32 - 1.0) * (FOV / 2.0).tan() * WIDTH as f32
+                    / HEIGHT as f32;
+            let y = -(2.0 * (j as f32 + 0.5) / HEIGHT as f32 - 1.0) * (FOV / 2.0).tan();
+
+            let mut dir = Vec3 {
+                r: x,
+                g: y,
+                b: -1.0,
+            };
+            dir.normalize();
+            framebuffer[(i + j * WIDTH) as usize] = cast_ray(&ORIGIN, &dir, sphere);
         }
     }
 
@@ -60,5 +75,12 @@ fn render() {
 }
 
 fn main() {
-    render();
+    render(&Sphere {
+        center: Vec3 {
+            r: -3.0,
+            g: 0.0,
+            b: -16.0,
+        },
+        radius: 2.0,
+    });
 }
