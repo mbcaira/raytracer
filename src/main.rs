@@ -76,16 +76,14 @@ fn cast_ray(orig: &Vec3f, dir: &mut Vec3f, spheres: &Vec<Sphere>, lights: &Vec<L
         let mut light_dir = light.position - point;
         light_dir.normalize();
         let dot_product = light_dir.dot(&n);
-        if dot_product > 0.0 {
-            diffuse_light_intensity += light.intensity * dot_product;
-        }
+        diffuse_light_intensity += light.intensity * dot_product.max(0.0);
     }
 
     material
         .diffuse_colour
         .scalar_multiply(diffuse_light_intensity);
 
-    return material.diffuse_colour;
+    material.diffuse_colour
 }
 
 fn render(spheres: &Vec<Sphere>, lights: &Vec<Light>) {
@@ -164,7 +162,7 @@ fn main() {
                 z: -18.0,
             },
             radius: 4.0,
-            material: ivory,
+            material: red,
         },
         Sphere {
             center: Vec3f {
@@ -182,7 +180,7 @@ fn main() {
                 z: -18.0,
             },
             radius: 2.0,
-            material: red,
+            material: ivory,
         },
     ];
 
@@ -190,7 +188,7 @@ fn main() {
         position: Vec3f {
             x: -20.0,
             y: 20.0,
-            z: 20.0,
+            z: 15.0,
         },
         intensity: 1.5,
     }];
