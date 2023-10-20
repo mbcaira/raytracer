@@ -21,6 +21,10 @@ const ORIGIN: Vec3f = Vec3f {
     z: 0.0,
 };
 
+fn reflect(i: Vec3f, n: Vec3f) -> Vec3f {
+    return i - n.scalar_multiply(2.0) * (i * n);
+}
+
 fn scene_intersect(
     orig: &Vec3f,
     dir: &mut Vec3f,
@@ -33,6 +37,8 @@ fn scene_intersect(
             y: 0.0,
             z: 0.0,
         },
+        albedo: (1.0, 0.0),
+        specular_exponent: 0.0,
     };
     let mut hit = Vec3f {
         x: 0.0,
@@ -49,10 +55,8 @@ fn scene_intersect(
         let (intersect, dist_i) = sphere.ray_intersect(orig, dir);
         if intersect && dist_i < spheres_dist {
             spheres_dist = dist_i;
-            dir.scalar_multiply(spheres_dist);
-            hit = *orig + *dir;
-            n = hit - sphere.center;
-            n.normalize();
+            hit = *orig + dir.scalar_multiply(dist_i);
+            n = (hit - sphere.center).normalize();
             material = sphere.material;
         }
     }
@@ -61,7 +65,7 @@ fn scene_intersect(
 }
 
 fn cast_ray(orig: &Vec3f, dir: &mut Vec3f, spheres: &Vec<Sphere>, lights: &Vec<Light>) -> Vec3f {
-    let (point, n, intersect, mut material) = scene_intersect(orig, dir, spheres);
+    let (point, n, intersect, material) = scene_intersect(orig, dir, spheres);
 
     if !intersect {
         return Vec3f {
@@ -72,18 +76,28 @@ fn cast_ray(orig: &Vec3f, dir: &mut Vec3f, spheres: &Vec<Sphere>, lights: &Vec<L
     }
 
     let mut diffuse_light_intensity = 0.0;
+    let mut specular_light_intensity = 0.0;
     for light in lights {
-        let mut light_dir = light.position - point;
-        light_dir.normalize();
-        let dot_product = light_dir.dot(&n);
-        diffuse_light_intensity += light.intensity * dot_product.max(0.0);
+        let light_dir = (light.position - point).normalize();
+
+        diffuse_light_intensity += light.intensity * f32::max(0.0, light_dir.dot(&n));
+        specular_light_intensity += f32::powf(
+            f32::max(0.0, reflect(light_dir, n).dot(dir)),
+            material.specular_exponent,
+        );
     }
 
     material
         .diffuse_colour
-        .scalar_multiply(diffuse_light_intensity);
-
-    material.diffuse_colour
+        .scalar_multiply(diffuse_light_intensity)
+        .scalar_multiply(material.albedo.0)
+        + Vec3f {
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+        }
+        .scalar_multiply(specular_light_intensity)
+        .scalar_multiply(material.albedo.1)
 }
 
 fn render(spheres: &Vec<Sphere>, lights: &Vec<Light>) {
@@ -108,21 +122,26 @@ fn render(spheres: &Vec<Sphere>, lights: &Vec<Light>) {
                 y: y,
                 z: -1.0,
             };
-            dir.normalize();
+            dir = dir.normalize();
             framebuffer[(i + j * WIDTH) as usize] = cast_ray(&ORIGIN, &mut dir, spheres, lights);
         }
     }
 
-    write_image(framebuffer)
+    write_image(&mut framebuffer)
 }
 
-fn write_image(framebuffer: Vec<Vec3f>) {
+fn write_image(framebuffer: &mut Vec<Vec3f>) {
     let mut file = File::create("./out.ppm").unwrap_or_else(|err| panic!("{err}"));
     file.write_all(format!("P6\n{WIDTH} {HEIGHT}\n255\n").as_bytes())
         .unwrap_or_else(|err| panic!("{err}"));
 
     for i in 0..HEIGHT * WIDTH {
         for j in 0..3 {
+            let c = &mut framebuffer[i];
+            let max = c[0].max(c[1]).max(c[2]);
+            if max > 1.0 {
+                c.scalar_multiply(1.0 / max);
+            }
             let pixel_value = (255.0 * framebuffer[i][j].max(0.0).min(1.0)) as u8;
             file.write_all(&[pixel_value])
                 .unwrap_or_else(|err| panic!("{err}"));
@@ -137,6 +156,8 @@ fn main() {
             y: 0.4,
             z: 0.3,
         },
+        albedo: (0.6, 0.3),
+        specular_exponent: 50.0,
     };
     let red = Material {
         diffuse_colour: Vec3f {
@@ -144,6 +165,8 @@ fn main() {
             y: 0.1,
             z: 0.1,
         },
+        albedo: (0.9, 0.1),
+        specular_exponent: 10.0,
     };
     let spheres = vec![
         Sphere {
@@ -154,15 +177,6 @@ fn main() {
             },
             radius: 2.0,
             material: ivory,
-        },
-        Sphere {
-            center: Vec3f {
-                x: 7.0,
-                y: 5.0,
-                z: -18.0,
-            },
-            radius: 4.0,
-            material: red,
         },
         Sphere {
             center: Vec3f {
@@ -179,18 +193,45 @@ fn main() {
                 y: -0.5,
                 z: -18.0,
             },
-            radius: 2.0,
+            radius: 3.0,
+            material: red,
+        },
+        Sphere {
+            center: Vec3f {
+                x: 7.0,
+                y: 5.0,
+                z: -18.0,
+            },
+            radius: 4.0,
             material: ivory,
         },
     ];
 
-    let lights = vec![Light {
-        position: Vec3f {
-            x: -20.0,
-            y: 20.0,
-            z: 15.0,
+    let lights = vec![
+        Light {
+            position: Vec3f {
+                x: -20.0,
+                y: 20.0,
+                z: 20.0,
+            },
+            intensity: 1.5,
         },
-        intensity: 1.5,
-    }];
+        Light {
+            position: Vec3f {
+                x: 30.0,
+                y: 50.0,
+                z: -25.0,
+            },
+            intensity: 1.8,
+        },
+        Light {
+            position: Vec3f {
+                x: 30.0,
+                y: 20.0,
+                z: 30.0,
+            },
+            intensity: 1.7,
+        },
+    ];
     render(&spheres, &lights);
 }

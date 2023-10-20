@@ -8,25 +8,29 @@ pub struct Vec3f {
 }
 
 impl Vec3f {
-    fn length(&self) -> f32 {
+    pub fn length(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
 
-    pub fn normalize(&mut self) {
+    pub fn normalize(&self) -> Self {
         let length = self.length();
-        self.x /= length;
-        self.y /= length;
-        self.z /= length;
+        Self {
+            x: self.x / length,
+            y: self.y / length,
+            z: self.z / length,
+        }
     }
 
     pub fn dot(&self, other: &Vec3f) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
-    pub fn scalar_multiply(&mut self, scalar: f32) {
-        self.x *= scalar;
-        self.y *= scalar;
-        self.z *= scalar;
+    pub fn scalar_multiply(&self, scalar: f32) -> Self {
+        Self {
+            x: self.x * scalar,
+            y: self.y * scalar,
+            z: self.z * scalar,
+        }
     }
 }
 
