@@ -1,237 +1,60 @@
-mod light;
-mod material;
-mod sphere;
-mod vec;
-
-use std::f32::consts::PI;
 use std::fs::File;
 use std::io::Write;
 
-use light::Light;
-use material::Material;
-use sphere::Sphere;
-use vec::Vec3f;
+mod colour;
+mod ray;
+mod vec3;
 
-const WIDTH: usize = 1024;
-const HEIGHT: usize = 768;
-const FOV: f32 = PI / 2.0;
-const ORIGIN: Vec3f = Vec3f {
-    x: 0.0,
-    y: 0.0,
-    z: 0.0,
-};
+use colour::{write_colour, Colour};
+use ray::Ray;
+use vec3::{Point3, Vec3};
 
-fn reflect(i: Vec3f, n: Vec3f) -> Vec3f {
-    return i - n.scalar_multiply(2.0) * (i * n);
-}
+const ASPECT_RATIO: f32 = 16.0 / 9.0;
+const IMAGE_WIDTH: usize = 400;
 
-fn scene_intersect(
-    orig: &Vec3f,
-    dir: &mut Vec3f,
-    spheres: &Vec<Sphere>,
-) -> (Vec3f, Vec3f, bool, Material) {
-    let mut spheres_dist = f32::MAX;
-    let mut material = Material {
-        diffuse_colour: Vec3f {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        },
-        albedo: (1.0, 0.0),
-        specular_exponent: 0.0,
-    };
-    let mut hit = Vec3f {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-    };
-    let mut n = Vec3f {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-    };
-
-    for sphere in spheres {
-        let (intersect, dist_i) = sphere.ray_intersect(orig, dir);
-        if intersect && dist_i < spheres_dist {
-            spheres_dist = dist_i;
-            hit = *orig + dir.scalar_multiply(dist_i);
-            n = (hit - sphere.center).normalize();
-            material = sphere.material;
-        }
-    }
-
-    return (hit, n, spheres_dist < 1000.0, material);
-}
-
-fn cast_ray(orig: &Vec3f, dir: &mut Vec3f, spheres: &Vec<Sphere>, lights: &Vec<Light>) -> Vec3f {
-    let (point, n, intersect, material) = scene_intersect(orig, dir, spheres);
-
-    if !intersect {
-        return Vec3f {
-            x: 0.2,
-            y: 0.7,
-            z: 0.8,
-        };
-    }
-
-    let mut diffuse_light_intensity = 0.0;
-    let mut specular_light_intensity = 0.0;
-    for light in lights {
-        let light_dir = (light.position - point).normalize();
-
-        diffuse_light_intensity += light.intensity * f32::max(0.0, light_dir.dot(&n));
-        specular_light_intensity += f32::powf(
-            f32::max(0.0, reflect(light_dir, n).dot(dir)),
-            material.specular_exponent,
-        );
-    }
-
-    material
-        .diffuse_colour
-        .scalar_multiply(diffuse_light_intensity)
-        .scalar_multiply(material.albedo.0)
-        + Vec3f {
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
-        }
-        .scalar_multiply(specular_light_intensity)
-        .scalar_multiply(material.albedo.1)
-}
-
-fn render(spheres: &Vec<Sphere>, lights: &Vec<Light>) {
-    let mut framebuffer = vec![
-        Vec3f {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0
-        };
-        (WIDTH * HEIGHT) as usize
-    ];
-
-    for j in 0..HEIGHT {
-        for i in 0..WIDTH {
-            let x =
-                (2.0 * (i as f32 + 0.5) / WIDTH as f32 - 1.0) * (FOV / 2.0).tan() * WIDTH as f32
-                    / HEIGHT as f32;
-            let y = -(2.0 * (j as f32 + 0.5) / HEIGHT as f32 - 1.0) * (FOV / 2.0).tan();
-
-            let mut dir = Vec3f {
-                x: x,
-                y: y,
-                z: -1.0,
-            };
-            dir = dir.normalize();
-            framebuffer[(i + j * WIDTH) as usize] = cast_ray(&ORIGIN, &mut dir, spheres, lights);
-        }
-    }
-
-    write_image(&mut framebuffer)
-}
-
-fn write_image(framebuffer: &mut Vec<Vec3f>) {
-    let mut file = File::create("./out.ppm").unwrap_or_else(|err| panic!("{err}"));
-    file.write_all(format!("P6\n{WIDTH} {HEIGHT}\n255\n").as_bytes())
-        .unwrap_or_else(|err| panic!("{err}"));
-
-    for i in 0..HEIGHT * WIDTH {
-        for j in 0..3 {
-            let c = &mut framebuffer[i];
-            let max = c[0].max(c[1]).max(c[2]);
-            if max > 1.0 {
-                c.scalar_multiply(1.0 / max);
-            }
-            let pixel_value = (255.0 * framebuffer[i][j].max(0.0).min(1.0)) as u8;
-            file.write_all(&[pixel_value])
-                .unwrap_or_else(|err| panic!("{err}"));
-        }
-    }
+fn ray_colour(r: &Ray) -> Colour {
+    let unit_direction = r.direction().unit_vector();
+    let a = 0.5 * (unit_direction.y() + 1.0);
+    Colour::new(1.0, 1.0, 1.0).scale(1.0 - a) + Colour::new(0.5, 0.7, 1.0).scale(a)
 }
 
 fn main() {
-    let ivory = Material {
-        diffuse_colour: Vec3f {
-            x: 0.4,
-            y: 0.4,
-            z: 0.3,
-        },
-        albedo: (0.6, 0.3),
-        specular_exponent: 50.0,
-    };
-    let red = Material {
-        diffuse_colour: Vec3f {
-            x: 0.3,
-            y: 0.1,
-            z: 0.1,
-        },
-        albedo: (0.9, 0.1),
-        specular_exponent: 10.0,
-    };
-    let spheres = vec![
-        Sphere {
-            center: Vec3f {
-                x: -3.0,
-                y: 0.0,
-                z: -16.0,
-            },
-            radius: 2.0,
-            material: ivory,
-        },
-        Sphere {
-            center: Vec3f {
-                x: -1.0,
-                y: -1.5,
-                z: -12.0,
-            },
-            radius: 2.0,
-            material: red,
-        },
-        Sphere {
-            center: Vec3f {
-                x: 1.5,
-                y: -0.5,
-                z: -18.0,
-            },
-            radius: 3.0,
-            material: red,
-        },
-        Sphere {
-            center: Vec3f {
-                x: 7.0,
-                y: 5.0,
-                z: -18.0,
-            },
-            radius: 4.0,
-            material: ivory,
-        },
-    ];
+    let image_height = usize::max((IMAGE_WIDTH as f32 / ASPECT_RATIO) as usize, 1);
 
-    let lights = vec![
-        Light {
-            position: Vec3f {
-                x: -20.0,
-                y: 20.0,
-                z: 20.0,
-            },
-            intensity: 1.5,
-        },
-        Light {
-            position: Vec3f {
-                x: 30.0,
-                y: 50.0,
-                z: -25.0,
-            },
-            intensity: 1.8,
-        },
-        Light {
-            position: Vec3f {
-                x: 30.0,
-                y: 20.0,
-                z: 30.0,
-            },
-            intensity: 1.7,
-        },
-    ];
-    render(&spheres, &lights);
+    // Camera
+    let focal_length = 1.0;
+    let viewport_height = 2.0;
+    let viewport_width = viewport_height * (IMAGE_WIDTH as f32 / image_height as f32);
+    let camera_center = Point3::new(0.0, 0.0, 0.0);
+
+    // Horizontal and vertical viewport edge vectors
+    let viewport_u = Vec3::new(viewport_width, 0.0, 0.0);
+    let viewport_v = Vec3::new(0.0, -viewport_height, 0.0);
+
+    // Pixel distance vectors
+    let pixel_delta_u = viewport_u.scale(1.0 / IMAGE_WIDTH as f32);
+    let pixel_delta_v = viewport_v.scale(1.0 / image_height as f32);
+
+    // Top left pixel/starting point
+    let viewport_upper_left = camera_center
+        - Vec3::new(0.0, 0.0, focal_length)
+        - viewport_u.scale(0.5)
+        - viewport_v.scale(0.5);
+
+    let pixel00_loc = viewport_upper_left + (pixel_delta_u + pixel_delta_v).scale(0.5);
+
+    let mut file = File::create("./out.ppm").unwrap();
+    file.write_all(format!("P3\n{} {}\n255\n", IMAGE_WIDTH, image_height).as_bytes())
+        .unwrap();
+
+    for j in 0..image_height {
+        for i in 0..IMAGE_WIDTH {
+            let pixel_center =
+                pixel00_loc + pixel_delta_u.scale(i as f32) + pixel_delta_v.scale(j as f32);
+            let ray_direction = pixel_center - camera_center;
+            let r = Ray::new(camera_center, ray_direction);
+            let pixel_colour = ray_colour(&r);
+            write_colour(&mut file, pixel_colour);
+        }
+    }
 }
