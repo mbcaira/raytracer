@@ -1,6 +1,6 @@
-use crate::hittable::Hittable;
-use crate::ray::Ray;
-use crate::vec3::Point3;
+use crate::Hittable;
+use crate::Point3;
+use crate::Ray;
 
 use super::HitRecord;
 
