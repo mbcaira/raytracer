@@ -4,43 +4,34 @@ use std::io::Write;
 mod colour;
 mod hittable;
 mod ray;
+mod utils;
 mod vec3;
 
 use colour::{write_colour, Colour};
+use hittable::{sphere::Sphere, HitRecord, Hittable, HittableList};
 use ray::Ray;
 use vec3::{Point3, Vec3};
 
 const ASPECT_RATIO: f32 = 16.0 / 9.0;
 const IMAGE_WIDTH: usize = 400;
 
-fn hit_sphere(center: &Point3, radius: f32, r: &Ray) -> f32 {
-    let oc = *r.origin() - *center;
-    let a = r.direction().length() * r.direction().length();
-    let half_b = oc.dot(r.direction());
-    let c = oc.length() * oc.length() - radius * radius;
-    let discriminant = half_b * half_b - a * c;
-
-    if discriminant < 0.0 {
-        -1.0
-    } else {
-        (-half_b - discriminant.sqrt()) / a
+fn ray_colour(r: &Ray, world: &mut dyn Hittable) -> Colour {
+    let mut rec = HitRecord::default();
+    if world.hit(r, 0.0, f32::INFINITY, &mut rec) {
+        return (rec.normal + Colour::new(1.0, 1.0, 1.0)).scale(0.5);
     }
-}
-
-fn ray_colour(r: &Ray) -> Colour {
-    let t = hit_sphere(&Point3::new(0.0, 0.0, -1.0), 0.5, &r);
-    if t > 0.0 {
-        let n = (r.at(t) - Vec3::new(0.0, 0.0, -1.0)).unit_vector();
-        Colour::new(n.x() + 1.0, n.y() + 1.0, n.z() + 1.0).scale(0.5)
-    } else {
-        let unit_direction = r.direction().unit_vector();
-        let a = 0.5 * (unit_direction.y() + 1.0);
-        Colour::new(1.0, 1.0, 1.0).scale(1.0 - a) + Colour::new(0.5, 0.7, 1.0).scale(a)
-    }
+    let unit_direction = r.direction().unit_vector();
+    let a = 0.5 * (unit_direction.y() + 1.0);
+    Colour::new(1.0, 1.0, 1.0).scale(1.0 - a) + Colour::new(0.5, 0.7, 1.0).scale(a)
 }
 
 fn main() {
     let image_height = usize::max((IMAGE_WIDTH as f32 / ASPECT_RATIO) as usize, 1);
+
+    // World
+    let mut world = HittableList::new();
+    world.add(Box::new(Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5)));
+    world.add(Box::new(Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0)));
 
     // Camera
     let focal_length = 1.0;
@@ -74,7 +65,8 @@ fn main() {
                 pixel00_loc + pixel_delta_u.scale(i as f32) + pixel_delta_v.scale(j as f32);
             let ray_direction = pixel_center - camera_center;
             let r = Ray::new(camera_center, ray_direction);
-            let pixel_colour = ray_colour(&r);
+
+            let pixel_colour = ray_colour(&r, &mut world);
             write_colour(&mut file, pixel_colour);
         }
     }
