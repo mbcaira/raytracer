@@ -1,7 +1,9 @@
 use std::fs::File;
 use std::io::Write;
 
-use crate::{write_colour, Colour, HitRecord, Hittable, Point3, Ray, Vec3};
+use crate::{
+    utils::interval::Interval, write_colour, Colour, HitRecord, Hittable, Point3, Ray, Vec3,
+};
 
 #[derive(Default)]
 pub struct Camera {
@@ -38,7 +40,7 @@ impl Camera {
 
     fn ray_colour(r: &Ray, world: &mut dyn Hittable) -> Colour {
         let mut rec = HitRecord::default();
-        if world.hit(r, 0.0, f32::INFINITY, &mut rec) {
+        if world.hit(r, Interval::new(0.0, f32::INFINITY), &mut rec) {
             return (rec.normal + Colour::new(1.0, 1.0, 1.0)).scale(0.5);
         }
         let unit_direction = r.direction().unit_vector();

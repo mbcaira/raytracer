@@ -1,6 +1,6 @@
 pub mod sphere;
 
-use crate::{Point3, Ray, Vec3};
+use crate::{utils::interval::Interval, Point3, Ray, Vec3};
 #[derive(Clone, Copy, Default)]
 pub struct HitRecord {
     pub p: Point3,
@@ -21,7 +21,7 @@ impl HitRecord {
 }
 
 pub trait Hittable {
-    fn hit(&mut self, ray: &Ray, ray_tmin: f32, ray_tmax: f32, rec: &mut HitRecord) -> bool;
+    fn hit(&mut self, ray: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool;
 }
 
 pub struct HittableList {
@@ -45,13 +45,13 @@ impl HittableList {
 }
 
 impl Hittable for HittableList {
-    fn hit(&mut self, ray: &Ray, ray_tmin: f32, ray_tmax: f32, rec: &mut HitRecord) -> bool {
+    fn hit(&mut self, ray: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
         let mut temp_rec = HitRecord::default();
         let mut hit_anything = false;
-        let mut closest_so_far = ray_tmax;
+        let mut closest_so_far = ray_t.max;
 
         for object in &mut self.objects {
-            if object.hit(ray, ray_tmin, closest_so_far, &mut temp_rec) {
+            if object.hit(ray, Interval::new(ray_t.min, closest_so_far), &mut temp_rec) {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
                 *rec = temp_rec;

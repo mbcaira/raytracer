@@ -1,4 +1,5 @@
 pub mod colour;
+pub mod interval;
 pub mod vec3;
 
 use std::f32::consts::PI;
