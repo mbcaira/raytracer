@@ -1,5 +1,5 @@
 use std::ops::{Add, Index, Sub};
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Vec3 {
     x: f32,
     y: f32,

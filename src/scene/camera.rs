@@ -2,13 +2,15 @@ use std::fs::File;
 use std::io::Write;
 
 use crate::{
-    utils::interval::Interval, write_colour, Colour, HitRecord, Hittable, Point3, Ray, Vec3,
+    utils::{interval::Interval, random_float},
+    write_colour, Colour, HitRecord, Hittable, Point3, Ray, Vec3,
 };
 
 #[derive(Default)]
 pub struct Camera {
     pub aspect_ratio: f32,
     pub image_width: usize,
+    pub samples_per_pixel: usize,
     image_height: usize,
     center: Point3,
     pixel00_loc: Point3,
@@ -17,27 +19,6 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn render(&mut self, world: &mut dyn Hittable) {
-        self.initialize();
-
-        let mut file = File::create("./out.ppm").unwrap();
-        file.write_all(format!("P3\n{} {}\n255\n", self.image_width, self.image_height).as_bytes())
-            .unwrap();
-
-        for j in 0..self.image_height {
-            for i in 0..self.image_width {
-                let pixel_center = self.pixel00_loc
-                    + self.pixel_delta_u.scale(i as f32)
-                    + self.pixel_delta_v.scale(j as f32);
-                let ray_direction = pixel_center - self.center;
-                let r = Ray::new(self.center, ray_direction);
-
-                let pixel_colour = Self::ray_colour(&r, world);
-                write_colour(&mut file, pixel_colour);
-            }
-        }
-    }
-
     fn ray_colour(r: &Ray, world: &mut dyn Hittable) -> Colour {
         let mut rec = HitRecord::default();
         if world.hit(r, Interval::new(0.0, f32::INFINITY), &mut rec) {
@@ -46,6 +27,24 @@ impl Camera {
         let unit_direction = r.direction().unit_vector();
         let a = 0.5 * (unit_direction.y() + 1.0);
         Colour::new(1.0, 1.0, 1.0).scale(1.0 - a) + Colour::new(0.5, 0.7, 1.0).scale(a)
+    }
+
+    fn get_ray(&self, i: usize, j: usize) -> Ray {
+        let pixel_center = self.pixel00_loc
+            + self.pixel_delta_u.scale(i as f32)
+            + self.pixel_delta_v.scale(j as f32);
+
+        let pixel_sample = pixel_center + self.pixel_sample_square();
+        let ray_direction = pixel_sample - self.center;
+
+        Ray::new(self.center, ray_direction)
+    }
+
+    fn pixel_sample_square(&self) -> Vec3 {
+        let px = -0.5 + random_float(0.0, 1.0);
+        let py = -0.5 + random_float(0.0, 1.0);
+
+        self.pixel_delta_u.scale(px) + self.pixel_delta_v.scale(py)
     }
 
     fn initialize(&mut self) {
@@ -73,5 +72,24 @@ impl Camera {
 
         self.pixel00_loc =
             viewport_upper_left + (self.pixel_delta_u + self.pixel_delta_v).scale(0.5);
+    }
+
+    pub fn render(&mut self, world: &mut dyn Hittable) {
+        self.initialize();
+
+        let mut file = File::create("./out.ppm").unwrap();
+        file.write_all(format!("P3\n{} {}\n255\n", self.image_width, self.image_height).as_bytes())
+            .unwrap();
+
+        for j in 0..self.image_height {
+            for i in 0..self.image_width {
+                let mut pixel_colour = Colour::new(0.0, 0.0, 0.0);
+                for _ in 0..self.samples_per_pixel {
+                    let r = self.get_ray(i, j);
+                    pixel_colour = pixel_colour + Camera::ray_colour(&r, world);
+                }
+                write_colour(&mut file, pixel_colour, self.samples_per_pixel)
+            }
+        }
     }
 }
