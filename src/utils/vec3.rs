@@ -1,4 +1,6 @@
 use std::ops::{Add, Index, Sub};
+
+use super::{random_float, random_float_range};
 #[derive(Copy, Clone, Default, Debug)]
 pub struct Vec3 {
     x: f32,
@@ -12,6 +14,7 @@ impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
         Vec3 { x, y, z }
     }
+
     pub fn x(&self) -> f32 {
         self.x
     }
@@ -48,6 +51,40 @@ impl Vec3 {
 
     pub fn unit_vector(&self) -> Self {
         self.scale(1.0 / self.length())
+    }
+
+    fn random() -> Self {
+        Self::new(random_float(), random_float(), random_float())
+    }
+
+    pub fn random_range(min: f32, max: f32) -> Self {
+        Self::new(
+            random_float_range(min, max),
+            random_float_range(min, max),
+            random_float_range(min, max),
+        )
+    }
+
+    fn random_in_unit_sphere() -> Self {
+        loop {
+            let p = Self::random_range(-1.0, 1.0);
+            if (p.length() * p.length()) < 1.0 {
+                return p;
+            }
+        }
+    }
+
+    pub fn random_unit_vector() -> Self {
+        Self::random_in_unit_sphere().unit_vector()
+    }
+
+    pub fn random_on_hemisphere(normal: &Self) -> Self {
+        let on_unit_sphere = Self::random_unit_vector();
+        if on_unit_sphere.dot(normal) > 0.0 {
+            return on_unit_sphere;
+        } else {
+            return on_unit_sphere.scale(-1.0);
+        }
     }
 }
 

@@ -7,12 +7,14 @@ use super::interval::Interval;
 
 pub type Colour = Vec3;
 
+fn linear_to_gamma(linear_component: f32) -> f32 {
+    linear_component.sqrt()
+}
 pub fn write_colour(file: &mut File, pixel_colour: Colour, samples_per_pixel: usize) {
-    let t = 1.0 / samples_per_pixel as f32;
     let scaled_pixel_colour = pixel_colour.scale(1.0 / samples_per_pixel as f32);
-    let r = scaled_pixel_colour.x();
-    let g = scaled_pixel_colour.y();
-    let b = scaled_pixel_colour.z();
+    let r = linear_to_gamma(scaled_pixel_colour.x());
+    let g = linear_to_gamma(scaled_pixel_colour.y());
+    let b = linear_to_gamma(scaled_pixel_colour.z());
 
     let intensity = Interval::new(0.000, 0.999);
 
