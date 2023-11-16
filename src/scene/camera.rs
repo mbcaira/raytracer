@@ -28,8 +28,14 @@ impl Camera {
         }
 
         if world.hit(r, Interval::new(0.001, f32::INFINITY), &mut rec) {
-            let direction = rec.normal + Vec3::random_unit_vector();
-            return Self::ray_colour(&Ray::new(rec.p, direction), max_depth - 1, world).scale(0.5);
+            let mut scattered = Ray::default();
+            let mut attenuation = Colour::default();
+
+            if rec.mat.scatter(r, &rec, &mut attenuation, &mut scattered) {
+                return attenuation * Self::ray_colour(&scattered, max_depth - 1, world);
+            }
+
+            return Colour::default();
         }
         let unit_direction = r.direction().unit_vector();
         let a = 0.5 * (unit_direction.y() + 1.0);

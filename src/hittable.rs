@@ -1,12 +1,31 @@
+pub mod material;
 pub mod sphere;
 
+use std::rc::Rc;
+
 use crate::{utils::interval::Interval, Point3, Ray, Vec3};
-#[derive(Clone, Copy, Default)]
+
+use self::material::{lambertian::Lambertian, Material};
 pub struct HitRecord {
     pub p: Point3,
     pub normal: Vec3,
     pub t: f32,
     pub front_face: bool,
+    pub mat: Rc<dyn Material>,
+}
+
+impl Default for HitRecord {
+    fn default() -> Self {
+        let default_material: Rc<dyn Material> = Rc::new(Lambertian::default());
+
+        Self {
+            p: Point3::default(),
+            normal: Vec3::default(),
+            t: 0.0,
+            front_face: false,
+            mat: default_material,
+        }
+    }
 }
 
 impl HitRecord {
@@ -46,15 +65,13 @@ impl HittableList {
 
 impl Hittable for HittableList {
     fn hit(&mut self, ray: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
-        let mut temp_rec = HitRecord::default();
         let mut hit_anything = false;
         let mut closest_so_far = ray_t.max;
 
         for object in &mut self.objects {
-            if object.hit(ray, Interval::new(ray_t.min, closest_so_far), &mut temp_rec) {
+            if object.hit(ray, Interval::new(ray_t.min, closest_so_far), rec) {
                 hit_anything = true;
-                closest_so_far = temp_rec.t;
-                *rec = temp_rec;
+                closest_so_far = rec.t;
             }
         }
 

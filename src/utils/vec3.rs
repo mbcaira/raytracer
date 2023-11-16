@@ -1,4 +1,4 @@
-use std::ops::{Add, Index, Sub};
+use std::ops::{Add, Index, Mul, Sub};
 
 use super::{random_float, random_float_range};
 #[derive(Copy, Clone, Default, Debug)]
@@ -86,6 +86,15 @@ impl Vec3 {
             return on_unit_sphere.scale(-1.0);
         }
     }
+
+    pub fn near_zero(&self) -> bool {
+        let s = 1e-8;
+        self[0].abs() < s && self[1].abs() < s && self[2].abs() < s
+    }
+
+    pub fn reflect(v: &Self, n: &Self) -> Self {
+        *v - n.scale(2.0 * v.dot(n))
+    }
 }
 
 impl Index<usize> for Vec3 {
@@ -102,10 +111,10 @@ impl Index<usize> for Vec3 {
 }
 
 impl Add for Vec3 {
-    type Output = Vec3;
+    type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Vec3 {
+        Self {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
             z: self.z + rhs.z,
@@ -114,13 +123,25 @@ impl Add for Vec3 {
 }
 
 impl Sub for Vec3 {
-    type Output = Vec3;
+    type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Vec3 {
+        Self {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
             z: self.z - rhs.z,
+        }
+    }
+}
+
+impl Mul for Vec3 {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
         }
     }
 }
