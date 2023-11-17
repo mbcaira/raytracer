@@ -5,7 +5,7 @@ mod utils;
 use std::rc::Rc;
 
 use hittable::{
-    material::{dielectric::Dielectric, lambertian::Lambertian, metal::Metal, Material},
+    material::{dielectric::Dielectric, lambertian::Lambertian, metal::Metal},
     {sphere::Sphere, HitRecord, Hittable, HittableList},
 };
 use scene::{camera::Camera, ray::Ray};

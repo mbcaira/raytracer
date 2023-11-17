@@ -78,15 +78,6 @@ impl Vec3 {
         Self::random_in_unit_sphere().unit_vector()
     }
 
-    pub fn random_on_hemisphere(normal: &Self) -> Self {
-        let on_unit_sphere = Self::random_unit_vector();
-        if on_unit_sphere.dot(normal) > 0.0 {
-            return on_unit_sphere;
-        } else {
-            return on_unit_sphere.scale(-1.0);
-        }
-    }
-
     pub fn near_zero(&self) -> bool {
         let s = 1e-8;
         self[0].abs() < s && self[1].abs() < s && self[2].abs() < s
