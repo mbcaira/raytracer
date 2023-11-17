@@ -53,7 +53,7 @@ impl Vec3 {
         self.scale(1.0 / self.length())
     }
 
-    fn random() -> Self {
+    pub fn random() -> Self {
         Self::new(random_float(), random_float(), random_float())
     }
 
