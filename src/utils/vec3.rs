@@ -95,6 +95,18 @@ impl Vec3 {
     pub fn reflect(v: &Self, n: &Self) -> Self {
         *v - n.scale(2.0 * v.dot(n))
     }
+
+    pub fn refract(uv: &Vec3, n: &Vec3, etai_over_etat: f32) -> Self {
+        let cos_theta = uv.scale(-1.0).dot(n).min(1.0);
+        let r_out_perp = (*uv + n.scale(cos_theta)).scale(etai_over_etat);
+        let r_out_parallel = n.scale(
+            -(1.0 - r_out_perp.length() * r_out_perp.length())
+                .abs()
+                .sqrt(),
+        );
+
+        r_out_perp + r_out_parallel
+    }
 }
 
 impl Index<usize> for Vec3 {
