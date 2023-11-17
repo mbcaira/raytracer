@@ -45,7 +45,7 @@ impl Vec3 {
         Vec3 {
             x: self.y * v.z - self.z * v.y,
             y: self.z * v.x - self.x * v.z,
-            z: self.x * v.y - self.y * self.x,
+            z: self.x * v.y - self.y * v.x,
         }
     }
 
@@ -106,6 +106,20 @@ impl Vec3 {
         );
 
         r_out_perp + r_out_parallel
+    }
+
+    pub fn random_in_unit_disk() -> Self {
+        loop {
+            let p = Vec3::new(
+                random_float_range(-1.0, 1.0),
+                random_float_range(-1.0, 1.0),
+                0.0,
+            );
+
+            if (p.length() * p.length()) < 1.0 {
+                return p;
+            }
+        }
     }
 }
 

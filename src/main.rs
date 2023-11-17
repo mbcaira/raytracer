@@ -27,8 +27,8 @@ fn main() {
     let sphere_ground = Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0, material_ground);
     let sphere_center = Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5, material_sphere_center);
     let sphere_left = Sphere::new(Point3::new(-1.0, 0.0, -1.0), 0.5, material_sphere_left);
-    let sphere_right = Sphere::new(Point3::new(1.0, 0.0, -1.0), 0.5, material_sphere_right);
-    let sphere_hollow = Sphere::new(Point3::new(-1.0, 0.0, -1.0), -0.4, material_sphere_hollow);
+    let sphere_right = Sphere::new(Point3::new(-1.0, 0.0, -1.0), -0.4, material_sphere_right);
+    let sphere_hollow = Sphere::new(Point3::new(1.0, 0.0, -1.0), 0.5, material_sphere_hollow);
 
     world.add(Box::new(sphere_ground));
     world.add(Box::new(sphere_center));
@@ -42,6 +42,12 @@ fn main() {
     cam.image_width = 400;
     cam.samples_per_pixel = 100;
     cam.max_depth = 50;
+    cam.lookfrom = Point3::new(-2.0, 2.0, 1.0);
+    cam.lookat = Point3::new(0.0, 0.0, -1.0);
+    cam.vup = Point3::new(0.0, 1.0, 0.0);
+    cam.vfov = 20.0;
+    cam.defocus_angle = 10.0;
+    cam.focus_dist = 3.4;
 
     cam.render(&mut world)
 }
